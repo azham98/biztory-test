@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sale;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
 
@@ -15,7 +16,8 @@ class SaleController extends Controller
      */
     public function index()
     {
-        return Sale::all();
+        $sale = Sale::all();
+        return response()->json($sale);
     }
 
     /**
@@ -31,16 +33,53 @@ class SaleController extends Controller
      */
     public function store(Request $request)
     {
+        $data = Validator::make($request->all(), [
+            'status' => 'required',
+            'ref_num' => 'required',
+            'invoice_date' => 'required',
+            'delivery_date' => 'nullable',
+            'payee' => 'required',
+            'payee_id' => 'required',
+            'total' => 'required',
+            'currency' => 'nullable',
+            'currency_total' => 'required',
+            'paid' => 'required',
+            'due' => 'required',
+            'rounding' => 'nullable',
+            'due_date' => 'nullable',
+            'attn' => 'nullable',
+            'payment_term' => 'nullable',
+            'payment_status' => 'nullable',
+            'payment_status' => 'required',
+            'delivery_status' => 'required',
+            'branch_id' => 'nullable',
+            'locked' => 'required',
+            'staff_id' => 'nullable',
+            'author_id' => 'nullable',
+        ]);
+
+        if ($data->fails()) {
+            return response()->json(['errors' => $data->errors()], 400);
+        }
+
         $sale = Sale::create($request->all());
+
         return response()->json($sale, 201);
+
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Sale $sale)
+    public function show($id)
     {
-        return $sale;
+        $sale = Sale::find($id);
+
+        if (!$sale) {
+            return response()->json(['error' => 'Sale not found'], 404);
+        }
+
+        return response()->json($sale);
     }
 
     /**
@@ -54,8 +93,14 @@ class SaleController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Sale $sale)
+    public function update(Request $request, $id)
     {
+        $sale = Sale::find($id);
+
+        if (!$sale) {
+            return response()->json(['error' => 'Sale not found'], 404);
+        }
+
         $sale->update($request->all());
         return response()->json($sale, 200);
     }
@@ -63,10 +108,18 @@ class SaleController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Sale $sale)
+    public function destroy($id)
     {
+        $sale = Sale::find($id);
+
+        if (!$sale) {
+            return response()->json(['error' => 'Sale not found'], 404);
+        }
+
+        // soft delete
         $sale->delete();
-        return response()->json(null, 204);
+
+        return response()->json(['message' => 'Sale deleted'], 200);
     }
 
     public function dailyTotalSales(Request $request)
@@ -80,15 +133,6 @@ class SaleController extends Controller
             ->get();
 
         return response()->json($dailySales);
-        // $startDate = Carbon::parse($args['startDate'])->startOfDay();
-        // $endDate = Carbon::parse($args['endDate'])->endOfDay();
-
-        // $dailySales = Sale::selectRaw('DATE(created_at) as date, SUM(amount) as totalAmount')
-        //     ->whereBetween('created_at', [$startDate, $endDate])
-        //     ->groupBy('date')
-        //     ->get();
-
-        // return $dailySales;
     }
 
     public function filter(Request $request)
